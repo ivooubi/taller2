@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="es">
 <head>
@@ -161,6 +162,11 @@
     .hilo { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
     .hilo__volver { display: none; }
     .hilo__cab h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hilo__contacto { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; margin-left: auto; color: #9a9aa0; font-size: .8125rem; line-height: 1.3; text-align: right; }
+    .hilo__contacto:empty { display: none; }
+    .hilo__contacto a { color: inherit; text-decoration: none; }
+    .hilo__contacto a:hover { text-decoration: underline; }
+    @media (max-width: 800px) { .hilo__contacto { max-width: 45%; overflow-wrap: anywhere; } }
     .hilo__vacio { margin: auto; padding: 2rem; color: var(--muted); }
     .hilo__cuerpo { display: flex; flex: 1; flex-direction: column; min-height: 0; }
     .mensajes {
@@ -235,6 +241,7 @@
         <div class="hilo__cab">
           <button class="btn btn--ghost btn--small hilo__volver" id="volver" type="button">Volver</button>
           <h2 id="hilo-nombre"></h2>
+          <div class="hilo__contacto" id="hilo-contacto"></div>
         </div>
         <ol class="mensajes" id="mensajes" aria-live="polite"></ol>
         <p class="aviso" id="hilo-aviso" role="alert"></p>
@@ -273,7 +280,7 @@
     const el = {
       acceso: $('#acceso'), formAcceso: $('#form-acceso'), correo: $('#correo'), clave: $('#clave'), accesoAviso: $('#acceso-aviso'),
       panel: $('#panel'), lista: $('#conversaciones'), salir: $('#salir'), directo: $('#directo'),
-      vacio: $('#hilo-vacio'), cuerpo: $('#hilo-cuerpo'), nombre: $('#hilo-nombre'), volver: $('#volver'),
+      vacio: $('#hilo-vacio'), cuerpo: $('#hilo-cuerpo'), nombre: $('#hilo-nombre'), contacto: $('#hilo-contacto'), volver: $('#volver'),
       mensajes: $('#mensajes'), form: $('#form-responder'), respuesta: $('#respuesta'), enviar: $('#enviar'), aviso: $('#hilo-aviso')
     };
     const TITULO = 'Panel del taller';
@@ -284,6 +291,9 @@
     let pendientes = [];         // mensajes en directo que llegan mientras se carga el hilo
     let temporizador = null;
     let yaConectado = false;
+    let ultimaFecha = null;      // fecha del último mensaje pintado (para pedir solo los nuevos)
+    let firmaLista = '';
+    let sondeando = false;
 
     const hora = iso => {
       const d = new Date(iso);
@@ -293,6 +303,30 @@
         : d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
     };
     const bajar = () => { el.mensajes.scrollTop = el.mensajes.scrollHeight; };
+
+    // Teléfono y email viajan en la primera línea del primer mensaje, pero nunca se muestran como texto:
+    // el panel del taller los saca de ahí y los pone en la cabecera. También se reconoce el formato antiguo.
+    function separarContacto(texto) {
+      texto = String(texto || '');
+      let m = /^\[contacto\](\{[^\n]*\})\n\n/.exec(texto);
+      if (m) {
+        try { return { contacto: JSON.parse(m[1]), texto: texto.slice(m[0].length) }; } catch { /* mensaje normal */ }
+      }
+      m = /^((?:Teléfono: [^\n]*\n)?(?:Email: [^\n]*\n)?)\n/.exec(texto);
+      if (m && m[1]) {
+        const tel = /Teléfono: ([^\n]*)/.exec(m[1]);
+        const mail = /Email: ([^\n]*)/.exec(m[1]);
+        return { contacto: { telefono: tel ? tel[1] : '', email: mail ? mail[1] : '' }, texto: texto.slice(m[0].length) };
+      }
+      return { contacto: null, texto };
+    }
+
+    function pintarContacto(c) {
+      el.contacto.replaceChildren();
+      if (!c) return;
+      if (c.telefono) { const a = document.createElement('a'); a.href = 'tel:' + c.telefono.replace(/[^\d+]/g, ''); a.textContent = c.telefono; el.contacto.append(a); }
+      if (c.email) { const a = document.createElement('a'); a.href = 'mailto:' + c.email; a.textContent = c.email; el.contacto.append(a); }
+    }
 
     function estadoDirecto(activo, texto) {
       el.directo.classList.toggle('directo--on', activo);
@@ -359,14 +393,17 @@
     });
 
     /* ---------- Lista ---------- */
-    async function cargarLista() {
+    async function cargarLista(silencioso = false) {
       const { data, error } = await db.from('conversaciones')
         .select('id,nombre,ultimo_mensaje,actualizada_en,sin_responder')
         .order('actualizada_en', { ascending: false });
       if (error) {
-        el.lista.replaceChildren(textoVacio('No se pudieron cargar las conversaciones. Revisa los permisos en Supabase.'));
+        if (!silencioso) el.lista.replaceChildren(textoVacio('No se pudieron cargar las conversaciones. Revisa los permisos en Supabase.'));
         return;
       }
+      const firma = JSON.stringify(data);
+      if (silencioso && firma === firmaLista) return;   // nada nuevo: no se repinta la lista
+      firmaLista = firma;
       conversaciones = data;
       pintarLista();
     }
@@ -394,7 +431,7 @@
         if (abierta && abierta.id === c.id) b.setAttribute('aria-current', 'true');
         const n = document.createElement('span'); n.className = 'conv__nombre'; n.textContent = c.nombre;
         const h = document.createElement('span'); h.className = 'conv__hora'; h.textContent = hora(c.actualizada_en);
-        const t = document.createElement('span'); t.className = 'conv__texto'; t.textContent = c.ultimo_mensaje || '';
+        const t = document.createElement('span'); t.className = 'conv__texto'; t.textContent = separarContacto(c.ultimo_mensaje).texto;
         b.append(n, h, t);
         if (c.sin_responder) {
           const punto = document.createElement('span');
@@ -413,9 +450,16 @@
     function pintarMensaje(m) {
       if (vistos.has(m.id)) return;
       vistos.add(m.id);
+      if (!ultimaFecha || m.creado_en > ultimaFecha) ultimaFecha = m.creado_en;
+      let contenido = m.contenido;
+      if (m.autor === 'cliente') {
+        const sep = separarContacto(contenido);
+        if (sep.contacto) { pintarContacto(sep.contacto); contenido = sep.texto; }   // los datos van a la cabecera, no al chat
+        if (!contenido.trim()) return;
+      }
       const li = document.createElement('li');
       li.className = `msg msg--${m.autor}`;
-      const t = document.createElement('p'); t.className = 'msg__texto'; t.textContent = m.contenido;
+      const t = document.createElement('p'); t.className = 'msg__texto'; t.textContent = contenido;
       const h = document.createElement('time'); h.className = 'msg__hora'; h.dateTime = m.creado_en; h.textContent = hora(m.creado_en);
       li.append(t, h);
       el.mensajes.append(li);
@@ -435,6 +479,7 @@
       if (error) { el.aviso.textContent = 'No se pudieron cargar los mensajes.'; return; }
       el.mensajes.replaceChildren();
       vistos.clear();
+      ultimaFecha = null;
       data.forEach(pintarMensaje);
       pendientes.forEach(pintarMensaje);   // los que llegaron en directo durante la carga
       pendientes = [];
@@ -447,6 +492,8 @@
       el.cuerpo.hidden = false;
       el.panel.classList.add('panel--hilo');
       el.nombre.textContent = c.nombre;
+      pintarContacto(null);
+      ultimaFecha = null;
       el.mensajes.replaceChildren();
       vistos.clear();
       pintarLista();
@@ -515,6 +562,35 @@
           }
         });
     }
+
+    /* ---------- Respaldo: comprobar mensajes nuevos cada pocos segundos ----------
+       El tiempo real de Supabase a veces no avisa (Realtime sin activar en la tabla, red inestable, pestaña dormida).
+       Así los mensajes nuevos aparecen solos aunque falle, sin tener que volver a pulsar el chat. */
+    async function traerNuevos(id) {
+      let q = db.from('mensajes')
+        .select('id,autor,contenido,creado_en')
+        .eq('conversacion_id', id)
+        .order('creado_en', { ascending: true })
+        .limit(500);
+      if (ultimaFecha) q = q.gte('creado_en', ultimaFecha);
+      const { data, error } = await q;
+      if (error || !abierta || abierta.id !== id || cargandoHilo) return;
+      data.forEach(pintarMensaje);   // pintarMensaje ignora los que ya están
+    }
+
+    async function sondear() {
+      if (sondeando || el.panel.hidden || document.hidden) return;
+      sondeando = true;
+      try {
+        await cargarLista(true);
+        if (abierta && !cargandoHilo) await traerNuevos(abierta.id);
+      } catch { /* se reintenta en el siguiente ciclo */ }
+      finally { sondeando = false; }
+    }
+    setInterval(sondear, 3000);
+    document.addEventListener('visibilitychange', sondear);
+    window.addEventListener('focus', sondear);
+    window.addEventListener('online', sondear);
 
     /* ---------- Arranque ---------- */
     db.auth.getSession().then(({ data }) => {
