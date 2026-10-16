@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#ffffff">
+  <title>Panel del taller</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg:      #ffffff;
+      --alt:     #f5f5f7;
+      --ink:     #1d1d1f;
+      --muted:   #6e6e73;
+      --line:    rgb(0 0 0 / .1);
+      --accent:  #0071e3;
+      --accent-hover: #0077ed;
+      --accent-soft:  rgb(0 113 227 / .1);
+      --open:    #34c759;
+      --danger:  #d70015;
+      --r-lg:    1.75rem;
+      --r-sm:    .875rem;
+      --shadow:  0 1px 2px rgb(0 0 0 / .04), 0 10px 32px rgb(0 0 0 / .08);
+      --ease:    cubic-bezier(.32, .72, 0, 1);
+      --font:    "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, .btn { touch-action: manipulation; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+
+    /* ---------- Botones: píldoras ---------- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 3rem;
+      padding: .7rem 1.5rem;
+      border: 0;
+      border-radius: 999px;
+      font: 500 1rem/1 var(--font);
+      letter-spacing: -.01em;
+      cursor: pointer;
+      -webkit-user-select: none;
+              user-select: none;
+      transition: background-color .2s, color .2s, transform .12s var(--ease), box-shadow .3s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn--signal { background: var(--accent); color: #fff; }
+    .btn--ghost  { background: var(--accent-soft); color: var(--accent); }
+    .btn--small  { min-height: 2.5rem; padding: .5rem 1.1rem; font-size: .9375rem; }
+    @media (hover: hover) {
+      .btn--signal:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 8px 22px rgb(0 113 227 / .32); }
+      .btn--ghost:hover { background: rgb(0 113 227 / .16); }
+    }
+
+    .field {
+      width: 100%;
+      min-height: 3rem;
+      padding: .7rem 1rem;
+      border: 1px solid transparent;
+      border-radius: var(--r-sm);
+      background: var(--alt);
+      color: var(--ink);
+      font: 400 1rem/1.4 var(--font);   /* 16px: iOS no hace zoom al enfocar */
+      transition: border-color .2s, box-shadow .2s, background-color .2s;
+    }
+    .field::placeholder { color: #86868b; }
+    .field:focus { outline: none; background: var(--bg); border-color: var(--accent); box-shadow: 0 0 0 4px rgb(0 113 227 / .2); }
+    .aviso { margin: 0; color: var(--danger); font-size: .9375rem; }
+    .aviso:empty { display: none; }
+
+    /* ---------- Acceso ---------- */
+    .acceso { display: grid; place-items: center; min-height: 100%; padding: 1.5rem; background: var(--alt); }
+    .acceso__form {
+      display: grid;
+      gap: .5rem;
+      width: min(100%, 25rem);
+      padding: clamp(1.5rem, 5vw, 2.25rem);
+      border-radius: var(--r-lg);
+      background: var(--bg);
+      box-shadow: 0 0 0 1px var(--line), var(--shadow);
+    }
+    .titulo { margin: 0 0 .75rem; font-size: 1.75rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+    .acceso label { margin-top: .5rem; font-size: .875rem; font-weight: 600; }
+    .acceso .btn { margin-top: 1.1rem; }
+    .acceso .aviso { margin-top: .5rem; }
+    .mensaje-estado { max-width: 32rem; margin: 3rem auto; padding: 0 1.5rem; color: var(--muted); }
+
+    /* ---------- Panel ---------- */
+    .panel { display: grid; grid-template-columns: 22rem minmax(0, 1fr); height: 100%; height: 100dvh; }
+    .lista { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--alt); }
+    .lista__cab, .hilo__cab {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 4.25rem;
+      padding: .75rem 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .hilo__cab { justify-content: flex-start; background: var(--bg); }
+    .lista__cab h1, .hilo__cab h2 { margin: 0; font-size: 1.125rem; font-weight: 600; letter-spacing: -.01em; }
+    .lista__acciones { display: flex; align-items: center; gap: .75rem; }
+    .directo { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .8125rem; }
+    .directo::before { content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: #c7c7cc; }
+    .directo--on::before { background: var(--open); box-shadow: 0 0 0 3px rgb(52 199 89 / .2); }
+
+    .conversaciones { flex: 1; min-height: 0; margin: 0; padding: .5rem; overflow-y: auto; list-style: none; }
+    .conv {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: .1rem .75rem;
+      width: 100%;
+      padding: .75rem .9rem;
+      border: 0;
+      border-radius: var(--r-sm);
+      background: none;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color .2s, box-shadow .2s;
+    }
+    .conv:hover { background: rgb(0 0 0 / .04); }
+    .conv[aria-current="true"] { background: var(--bg); box-shadow: 0 0 0 1px var(--line), 0 2px 10px rgb(0 0 0 / .05); }
+    .conv__nombre { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .conv__hora { color: var(--muted); font-size: .8125rem; }
+    .conv__texto {
+      grid-column: 1;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: .875rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .conv--nueva .conv__texto { color: var(--ink); font-weight: 500; }
+    .conv__punto { grid-column: 2; grid-row: 2; align-self: center; justify-self: end; width: .65rem; height: .65rem; border-radius: 50%; background: var(--accent); }
+    .vacio { padding: 2rem 1rem; color: var(--muted); font-size: .9375rem; }
+
+    .hilo { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+    .hilo__volver { display: none; }
+    .hilo__cab h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hilo__vacio { margin: auto; padding: 2rem; color: var(--muted); }
+    .hilo__cuerpo { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+    .mensajes {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: .5rem;
+      min-height: 0;
+      margin: 0;
+      padding: 1rem;
+      overflow-y: auto;
+      list-style: none;
+    }
+    .msg { display: flex; flex-direction: column; gap: .15rem; max-width: min(80%, 40rem); padding: .55rem .95rem; border-radius: 1.25rem; }
+    .msg--taller  { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: .4rem; }
+    .msg--cliente { align-self: flex-start; background: #e9e9eb; color: var(--ink); border-bottom-left-radius: .4rem; }
+    .msg__texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .msg__hora { align-self: flex-end; font-size: .6875rem; opacity: .7; }
+    @media (prefers-reduced-motion: no-preference) {
+      .msg { animation: msg-in .45s var(--ease) both; }
+      .msg--taller  { transform-origin: 100% 100%; }
+      .msg--cliente { transform-origin: 0 100%; }
+      @keyframes msg-in { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+    }
+
+    .responder { display: flex; align-items: flex-end; gap: .5rem; padding: .75rem; border-top: 1px solid var(--line); background: var(--alt); }
+    .responder .field { flex: 1; max-height: 9rem; resize: none; border-radius: 1.5rem; background: var(--bg); border-color: rgb(0 0 0 / .12); }
+    .responder .field:focus { border-color: var(--accent); }
+    .hilo .aviso { padding: .5rem 1rem 0; background: var(--alt); }
+
+    @media (max-width: 800px) {
+      .panel { grid-template-columns: minmax(0, 1fr); }
+      .hilo { display: none; }
+      .panel--hilo .lista { display: none; }
+      .panel--hilo .hilo { display: flex; }
+      .hilo__volver { display: inline-flex; }
+      .responder { padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px)); }
+    }
+  </style>
+</head>
+
+<body>
+  <p class="mensaje-estado" id="sin-config" hidden></p>
+
+  <main class="acceso" id="acceso" hidden>
+    <form class="acceso__form" id="form-acceso">
+      <h1 class="titulo">Panel del taller</h1>
+      <label for="correo">Correo</label>
+      <input class="field" id="correo" type="email" autocomplete="username" required>
+      <label for="clave">Contraseña</label>
+      <input class="field" id="clave" type="password" autocomplete="current-password" required>
+      <button class="btn btn--signal" type="submit">Entrar</button>
+      <p class="aviso" id="acceso-aviso" role="alert"></p>
+    </form>
+  </main>
+
+  <div class="panel" id="panel" hidden>
+    <aside class="lista" aria-label="Conversaciones">
+      <div class="lista__cab">
+        <h1>Conversaciones</h1>
+        <div class="lista__acciones">
+          <span class="directo" id="directo" role="status">Conectando…</span>
+          <button class="btn btn--ghost btn--small" id="salir" type="button">Salir</button>
+        </div>
+      </div>
+      <ul class="conversaciones" id="conversaciones"></ul>
+    </aside>
+
+    <section class="hilo" aria-label="Conversación abierta">
+      <p class="hilo__vacio" id="hilo-vacio">Elige una conversación de la lista.</p>
+      <div class="hilo__cuerpo" id="hilo-cuerpo" hidden>
+        <div class="hilo__cab">
+          <button class="btn btn--ghost btn--small hilo__volver" id="volver" type="button">Volver</button>
+          <h2 id="hilo-nombre"></h2>
+        </div>
+        <ol class="mensajes" id="mensajes" aria-live="polite"></ol>
+        <p class="aviso" id="hilo-aviso" role="alert"></p>
+        <form class="responder" id="form-responder">
+          <label class="sr-only" for="respuesta">Respuesta</label>
+          <textarea class="field" id="respuesta" rows="1" maxlength="2000" placeholder="Escribe tu respuesta" required></textarea>
+          <button class="btn btn--signal" id="enviar" type="submit">Enviar</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  (() => {
+    'use strict';
+    const $ = s => document.querySelector(s);
+    const cfg = window.SUPABASE_CONFIG || {};
+
+    const estado = $('#sin-config');
+    if (!cfg.url || !cfg.anonKey) {
+      estado.textContent = 'Falta configurar Supabase: rellena url y anonKey en config.js.';
+      estado.hidden = false;
+      return;
+    }
+    if (!window.supabase) {
+      estado.textContent = 'No se pudo cargar Supabase. Comprueba la conexión y recarga la página.';
+      estado.hidden = false;
+      return;
+    }
+
+    // Clave de sesión propia: no choca con la sesión anónima de un cliente en el mismo navegador
+    const db = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: 'taller-panel-auth' } });
+
+    const el = {
+      acceso: $('#acceso'), formAcceso: $('#form-acceso'), correo: $('#correo'), clave: $('#clave'), accesoAviso: $('#acceso-aviso'),
+      panel: $('#panel'), lista: $('#conversaciones'), salir: $('#salir'), directo: $('#directo'),
+      vacio: $('#hilo-vacio'), cuerpo: $('#hilo-cuerpo'), nombre: $('#hilo-nombre'), volver: $('#volver'),
+      mensajes: $('#mensajes'), form: $('#form-responder'), respuesta: $('#respuesta'), enviar: $('#enviar'), aviso: $('#hilo-aviso')
+    };
+    const TITULO = 'Panel del taller';
+    const vistos = new Set();
+    let conversaciones = [];
+    let abierta = null;          // { id, nombre }
+    let cargandoHilo = false;
+    let pendientes = [];         // mensajes en directo que llegan mientras se carga el hilo
+    let temporizador = null;
+    let yaConectado = false;
+
+    const hora = iso => {
+      const d = new Date(iso);
+      const hoy = new Date();
+      return d.toDateString() === hoy.toDateString()
+        ? d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+        : d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+    };
+    const bajar = () => { el.mensajes.scrollTop = el.mensajes.scrollHeight; };
+
+    function estadoDirecto(activo, texto) {
+      el.directo.classList.toggle('directo--on', activo);
+      el.directo.textContent = texto;
+    }
+
+    /* ---------- Acceso ---------- */
+    function mostrarAcceso(texto = '') {
+      el.panel.hidden = true;
+      el.acceso.hidden = false;
+      el.accesoAviso.textContent = texto;
+      document.title = TITULO;
+    }
+
+    async function entrar(session) {
+      const { data, error } = await db.from('personal').select('user_id').eq('user_id', session.user.id).maybeSingle();
+      if (error || !data) {
+        await db.auth.signOut();
+        mostrarAcceso('Esta cuenta no tiene acceso al panel del taller.');
+        return;
+      }
+      el.acceso.hidden = true;
+      el.panel.hidden = false;
+      await cargarLista();
+      suscribir();
+    }
+
+    el.formAcceso.addEventListener('submit', async e => {
+      e.preventDefault();
+      el.accesoAviso.textContent = '';
+      const boton = el.formAcceso.querySelector('button');
+      boton.disabled = true;
+      try {
+        const { data, error } = await db.auth.signInWithPassword({ email: el.correo.value.trim(), password: el.clave.value });
+        if (error) { el.accesoAviso.textContent = 'Correo o contraseña incorrectos.'; return; }
+        el.clave.value = '';
+        await entrar(data.session);
+      } catch {
+        el.accesoAviso.textContent = 'No se pudo conectar. Inténtalo de nuevo.';
+      } finally {
+        boton.disabled = false;
+      }
+    });
+
+    function cerrarPanel() {
+      abierta = null;
+      conversaciones = [];
+      yaConectado = false;
+      el.cuerpo.hidden = true;
+      el.vacio.hidden = false;
+      el.panel.classList.remove('panel--hilo');
+      mostrarAcceso();
+    }
+
+    el.salir.addEventListener('click', async () => {
+      await db.removeAllChannels();
+      await db.auth.signOut();
+      cerrarPanel();
+    });
+
+    // Si la sesión caduca o se cierra en otra pestaña, volvemos al acceso
+    db.auth.onAuthStateChange(evento => {
+      if (evento === 'SIGNED_OUT' && !el.panel.hidden) cerrarPanel();
+    });
+
+    /* ---------- Lista ---------- */
+    async function cargarLista() {
+      const { data, error } = await db.from('conversaciones')
+        .select('id,nombre,ultimo_mensaje,actualizada_en,sin_responder')
+        .order('actualizada_en', { ascending: false });
+      if (error) {
+        el.lista.replaceChildren(textoVacio('No se pudieron cargar las conversaciones. Revisa los permisos en Supabase.'));
+        return;
+      }
+      conversaciones = data;
+      pintarLista();
+    }
+
+    function textoVacio(texto) {
+      const p = document.createElement('li');
+      p.className = 'vacio';
+      p.textContent = texto;
+      return p;
+    }
+
+    function pintarLista() {
+      const sinResponder = conversaciones.filter(c => c.sin_responder).length;
+      document.title = sinResponder ? `(${sinResponder}) ${TITULO}` : TITULO;
+
+      if (!conversaciones.length) {
+        el.lista.replaceChildren(textoVacio('Todavía no hay conversaciones. Cuando un cliente escriba desde la web, aparecerá aquí.'));
+        return;
+      }
+      el.lista.replaceChildren(...conversaciones.map(c => {
+        const li = document.createElement('li');
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'conv' + (c.sin_responder ? ' conv--nueva' : '');
+        if (abierta && abierta.id === c.id) b.setAttribute('aria-current', 'true');
+        const n = document.createElement('span'); n.className = 'conv__nombre'; n.textContent = c.nombre;
+        const h = document.createElement('span'); h.className = 'conv__hora'; h.textContent = hora(c.actualizada_en);
+        const t = document.createElement('span'); t.className = 'conv__texto'; t.textContent = c.ultimo_mensaje || '';
+        b.append(n, h, t);
+        if (c.sin_responder) {
+          const punto = document.createElement('span');
+          punto.className = 'conv__punto';
+          punto.setAttribute('role', 'img');
+          punto.setAttribute('aria-label', 'Sin responder');
+          b.append(punto);
+        }
+        b.addEventListener('click', () => abrir(c));
+        li.append(b);
+        return li;
+      }));
+    }
+
+    /* ---------- Conversación ---------- */
+    function pintarMensaje(m) {
+      if (vistos.has(m.id)) return;
+      vistos.add(m.id);
+      const li = document.createElement('li');
+      li.className = `msg msg--${m.autor}`;
+      const t = document.createElement('p'); t.className = 'msg__texto'; t.textContent = m.contenido;
+      const h = document.createElement('time'); h.className = 'msg__hora'; h.dateTime = m.creado_en; h.textContent = hora(m.creado_en);
+      li.append(t, h);
+      el.mensajes.append(li);
+      bajar();
+    }
+
+    async function cargarHilo(id) {
+      cargandoHilo = true;
+      pendientes = [];
+      const { data, error } = await db.from('mensajes')
+        .select('id,autor,contenido,creado_en')
+        .eq('conversacion_id', id)
+        .order('creado_en', { ascending: true })
+        .limit(500);
+      if (!abierta || abierta.id !== id) return;   // se abrió otra mientras cargaba
+      cargandoHilo = false;
+      if (error) { el.aviso.textContent = 'No se pudieron cargar los mensajes.'; return; }
+      el.mensajes.replaceChildren();
+      vistos.clear();
+      data.forEach(pintarMensaje);
+      pendientes.forEach(pintarMensaje);   // los que llegaron en directo durante la carga
+      pendientes = [];
+    }
+
+    async function abrir(c) {
+      abierta = { id: c.id, nombre: c.nombre };
+      el.aviso.textContent = '';
+      el.vacio.hidden = true;
+      el.cuerpo.hidden = false;
+      el.panel.classList.add('panel--hilo');
+      el.nombre.textContent = c.nombre;
+      el.mensajes.replaceChildren();
+      vistos.clear();
+      pintarLista();
+      await cargarHilo(c.id);
+      if (!matchMedia('(pointer: coarse)').matches) el.respuesta.focus({ preventScroll: true });
+    }
+
+    el.volver.addEventListener('click', () => el.panel.classList.remove('panel--hilo'));
+
+    el.form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const texto = el.respuesta.value.trim();
+      if (!texto || !abierta) return;
+      el.aviso.textContent = '';
+      el.enviar.disabled = true;
+      try {
+        const { data, error } = await db.from('mensajes')
+          .insert({ conversacion_id: abierta.id, autor: 'taller', contenido: texto })
+          .select('id,autor,contenido,creado_en')
+          .single();
+        if (error) throw error;
+        pintarMensaje(data);
+        el.respuesta.value = '';
+        el.respuesta.style.height = 'auto';
+      } catch {
+        el.aviso.textContent = 'No se pudo enviar la respuesta. Inténtalo de nuevo.';
+      } finally {
+        el.enviar.disabled = false;
+        el.respuesta.focus({ preventScroll: true });
+      }
+    });
+
+    el.respuesta.addEventListener('input', () => {
+      el.respuesta.style.height = 'auto';
+      el.respuesta.style.height = Math.min(el.respuesta.scrollHeight, 144) + 'px';
+    });
+    el.respuesta.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !matchMedia('(pointer: coarse)').matches) {
+        e.preventDefault();
+        el.form.requestSubmit();
+      }
+    });
+
+    /* ---------- Tiempo real ---------- */
+    function suscribir() {
+      db.removeAllChannels();   // evita canales duplicados si se vuelve a entrar
+      db.channel('panel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'conversaciones' }, () => {
+          clearTimeout(temporizador);
+          temporizador = setTimeout(cargarLista, 150);
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
+          if (!abierta || payload.new.conversacion_id !== abierta.id) return;
+          if (cargandoHilo) pendientes.push(payload.new); else pintarMensaje(payload.new);
+        })
+        .subscribe(status => {
+          if (status === 'SUBSCRIBED') {
+            estadoDirecto(true, 'En directo');
+            // Tras una reconexión puede haberse perdido algo: recargamos lista e hilo abierto
+            if (yaConectado) { cargarLista(); if (abierta) cargarHilo(abierta.id); }
+            yaConectado = true;
+          } else if (status === 'CLOSED') {
+            estadoDirecto(false, 'Sin conexión');
+          } else {
+            estadoDirecto(false, 'Reconectando…');
+          }
+        });
+    }
+
+    /* ---------- Arranque ---------- */
+    db.auth.getSession().then(({ data }) => {
+      if (data.session) entrar(data.session); else mostrarAcceso();
+    });
+  })();
+  </script>
+</body>
+</html>
