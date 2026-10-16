@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="es">
 <head>
@@ -93,6 +92,14 @@
 
     /* ---------- Acceso ---------- */
     .acceso { display: grid; place-items: center; min-height: 100%; padding: 1.5rem; background: var(--alt); }
+    @keyframes giro { to { transform: rotate(360deg); } }
+    .btn.is-loading { position: relative; color: transparent; pointer-events: none; }
+    .btn.is-loading:disabled { opacity: 1; }
+    .btn.is-loading::after {
+      content: ""; position: absolute; width: 1.15rem; height: 1.15rem;
+      border: 2px solid rgb(255 255 255 / .35); border-top-color: #fff; border-radius: 50%;
+      animation: giro .7s linear infinite;
+    }
     .acceso__form {
       display: grid;
       gap: .5rem;
@@ -109,7 +116,7 @@
     .mensaje-estado { max-width: 32rem; margin: 3rem auto; padding: 0 1.5rem; color: var(--muted); }
 
     /* ---------- Panel ---------- */
-    .panel { display: grid; grid-template-columns: 22rem minmax(0, 1fr); height: 100%; height: 100dvh; }
+    .panel { --lista-w: 22rem; position: relative; display: grid; grid-template-columns: var(--lista-w) 1fr; height: 100%; height: 100dvh; }
     .lista { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--alt); }
     .lista__cab, .hilo__cab {
       display: flex;
@@ -122,10 +129,25 @@
     }
     .hilo__cab { justify-content: flex-start; background: var(--bg); }
     .lista__cab h1, .hilo__cab h2 { margin: 0; font-size: 1.125rem; font-weight: 600; letter-spacing: -.01em; }
-    .lista__acciones { display: flex; align-items: center; gap: .75rem; }
-    .directo { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .8125rem; }
-    .directo::before { content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: #c7c7cc; }
-    .directo--on::before { background: var(--open); box-shadow: 0 0 0 3px rgb(52 199 89 / .2); }
+    .lista__cab { flex-wrap: nowrap; }
+    .lista__titulo { display: flex; flex: 1; align-items: center; gap: .55rem; min-width: 0; }
+    .lista__titulo h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lista__acciones { display: flex; flex-shrink: 0; align-items: center; gap: .5rem; }
+    .lista__acciones .btn { white-space: nowrap; }
+    .btn--salir { min-height: 2.25rem; padding: .4rem 1rem; font-size: .875rem; }
+    /* Puntito de estado (sin texto): verde si hay conexión en directo */
+    .directo { flex-shrink: 0; width: .55rem; height: .55rem; border-radius: 50%; background: #c7c7cc; transition: background-color .3s, box-shadow .3s; }
+    .directo--on { background: var(--open); box-shadow: 0 0 0 3px rgb(52 199 89 / .2); }
+
+    /* Botones redondos con icono (ocultar / mostrar la lista) */
+    .btn--icono { flex-shrink: 0; width: 2.25rem; min-height: 2.25rem; padding: 0; }
+    .btn--icono svg { width: 1.2rem; height: 1.2rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .mostrar-lista {
+      position: absolute; z-index: 5; top: 1rem; left: 1rem;
+      opacity: 0; visibility: hidden; transform: scale(.7) translateX(-.5rem);
+      transition: opacity .3s, transform .45s var(--ease), visibility 0s .45s;
+    }
+    .mostrar-lista, .btn--plegar { display: none; }
 
     .conversaciones { flex: 1; min-height: 0; margin: 0; padding: .5rem; overflow-y: auto; list-style: none; }
     .conv {
@@ -197,6 +219,34 @@
     .responder .field:focus { border-color: var(--accent); }
     .hilo .aviso { padding: .5rem 1rem 0; background: var(--alt); }
 
+    /* ---------- Barra de conversaciones plegable (solo ordenador) ---------- */
+    @media (min-width: 801px) {
+      .mostrar-lista, .btn--plegar { display: inline-flex; }
+      .panel { transition: grid-template-columns .5s var(--ease); }
+      .lista { overflow: hidden; transition: border-color .5s; }
+      .lista > * { min-width: calc(22rem - 1px); transition: opacity .35s, transform .5s var(--ease); }
+      .hilo__cab { transition: padding-left .5s var(--ease); }
+      .panel--plegado { --lista-w: 0rem; }
+      .panel--plegado .lista { visibility: hidden; border-right-color: transparent; transition: border-color .5s, visibility 0s .5s; }
+      .panel--plegado .lista > * { opacity: 0; transform: translateX(-1.5rem); }
+      .panel--plegado .hilo__cab { padding-left: 4rem; }
+      .panel--plegado .mostrar-lista { opacity: 1; visibility: visible; transform: none; transition: opacity .3s .2s, transform .45s .2s var(--ease), visibility 0s; }
+    }
+
+    /* ---------- Animaciones de entrada ---------- */
+    @media (prefers-reduced-motion: no-preference) {
+      @keyframes form-in  { from { opacity: 0; transform: translateY(20px) scale(.96); } }
+      @keyframes form-out { to   { opacity: 0; transform: translateY(-14px) scale(.96); } }
+      @keyframes lista-in { from { opacity: 0; transform: translateX(-2.5rem); } }
+      @keyframes hilo-in  { from { opacity: 0; transform: translateY(16px); } }
+      @keyframes item-in  { from { opacity: 0; transform: translateX(-14px); } }
+      .acceso__form { animation: form-in .65s var(--ease) both; }
+      .acceso__form.saliendo { animation: form-out .38s var(--ease) forwards; }
+      .panel--entrando .lista { animation: lista-in .75s var(--ease) both; }
+      .panel--entrando .hilo { animation: hilo-in .75s .12s var(--ease) both; }
+      .panel--entrando .conversaciones > li { animation: item-in .55s var(--ease) both; animation-delay: calc(.3s + var(--i, 0) * 60ms); }
+    }
+
     @media (max-width: 800px) {
       .panel { grid-template-columns: minmax(0, 1fr); }
       .hilo { display: none; }
@@ -224,12 +274,20 @@
   </main>
 
   <div class="panel" id="panel" hidden>
-    <aside class="lista" aria-label="Conversaciones">
+    <button class="btn btn--ghost btn--icono mostrar-lista" id="mostrar-lista" type="button" aria-label="Mostrar conversaciones" aria-controls="lista">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M9.5 4.5v15M13.5 10l2.5 2-2.5 2"/></svg>
+    </button>
+    <aside class="lista" id="lista" aria-label="Conversaciones">
       <div class="lista__cab">
-        <h1>Conversaciones</h1>
+        <div class="lista__titulo">
+          <h1>Conversaciones</h1>
+          <span class="directo" id="directo" role="status" aria-label="Conectando"></span>
+        </div>
         <div class="lista__acciones">
-          <span class="directo" id="directo" role="status">Conectando…</span>
-          <button class="btn btn--ghost btn--small" id="salir" type="button">Salir</button>
+          <button class="btn btn--ghost btn--salir" id="salir" type="button">Salir</button>
+          <button class="btn btn--ghost btn--icono btn--plegar" id="ocultar-lista" type="button" aria-label="Ocultar conversaciones" aria-controls="lista" aria-expanded="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M9.5 4.5v15M16 10l-2.5 2 2.5 2"/></svg>
+          </button>
         </div>
       </div>
       <ul class="conversaciones" id="conversaciones"></ul>
@@ -281,6 +339,7 @@
       acceso: $('#acceso'), formAcceso: $('#form-acceso'), correo: $('#correo'), clave: $('#clave'), accesoAviso: $('#acceso-aviso'),
       panel: $('#panel'), lista: $('#conversaciones'), salir: $('#salir'), directo: $('#directo'),
       vacio: $('#hilo-vacio'), cuerpo: $('#hilo-cuerpo'), nombre: $('#hilo-nombre'), contacto: $('#hilo-contacto'), volver: $('#volver'),
+      ocultarLista: $('#ocultar-lista'), mostrarLista: $('#mostrar-lista'),
       mensajes: $('#mensajes'), form: $('#form-responder'), respuesta: $('#respuesta'), enviar: $('#enviar'), aviso: $('#hilo-aviso')
     };
     const TITULO = 'Panel del taller';
@@ -328,14 +387,34 @@
       if (c.email) { const a = document.createElement('a'); a.href = 'mailto:' + c.email; a.textContent = c.email; el.contacto.append(a); }
     }
 
+    // Solo un puntito: verde con conexión en directo, gris si no. Sin textos de "Reconectando…".
     function estadoDirecto(activo, texto) {
       el.directo.classList.toggle('directo--on', activo);
-      el.directo.textContent = texto;
+      el.directo.setAttribute('aria-label', activo ? 'En directo' : 'Sin conexión en directo');
     }
+
+    /* ---------- Barra de conversaciones plegable ---------- */
+    const CLAVE_PLEGADO = 'taller-lista-plegada';
+    function plegarLista(plegar) {
+      el.panel.classList.toggle('panel--plegado', plegar);
+      el.ocultarLista.setAttribute('aria-expanded', String(!plegar));
+      try { localStorage.setItem(CLAVE_PLEGADO, plegar ? '1' : '0'); } catch { /* sin almacenamiento */ }
+      if (plegar) el.mostrarLista.focus({ preventScroll: true });
+      else el.ocultarLista.focus({ preventScroll: true });
+    }
+    el.ocultarLista.addEventListener('click', () => plegarLista(true));
+    el.mostrarLista.addEventListener('click', () => plegarLista(false));
+    try {
+      if (localStorage.getItem(CLAVE_PLEGADO) === '1') {
+        el.panel.classList.add('panel--plegado');
+        el.ocultarLista.setAttribute('aria-expanded', 'false');
+      }
+    } catch { /* sin almacenamiento */ }
 
     /* ---------- Acceso ---------- */
     function mostrarAcceso(texto = '') {
       el.panel.hidden = true;
+      el.formAcceso.classList.remove('saliendo');
       el.acceso.hidden = false;
       el.accesoAviso.textContent = texto;
       document.title = TITULO;
@@ -348,9 +427,11 @@
         mostrarAcceso('Esta cuenta no tiene acceso al panel del taller.');
         return;
       }
+      await cargarLista();   // la lista ya está lista cuando aparece el panel, así se anima entera
+      el.panel.classList.add('panel--entrando');
       el.acceso.hidden = true;
       el.panel.hidden = false;
-      await cargarLista();
+      setTimeout(() => el.panel.classList.remove('panel--entrando'), 1800);
       suscribir();
     }
 
@@ -359,15 +440,22 @@
       el.accesoAviso.textContent = '';
       const boton = el.formAcceso.querySelector('button');
       boton.disabled = true;
+      boton.classList.add('is-loading');   // ruedecita mientras se comprueba el acceso
       try {
         const { data, error } = await db.auth.signInWithPassword({ email: el.correo.value.trim(), password: el.clave.value });
         if (error) { el.accesoAviso.textContent = 'Correo o contraseña incorrectos.'; return; }
         el.clave.value = '';
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          el.formAcceso.classList.add('saliendo');   // la tarjeta se va antes de que entre el panel
+          await new Promise(r => setTimeout(r, 380));
+        }
         await entrar(data.session);
       } catch {
         el.accesoAviso.textContent = 'No se pudo conectar. Inténtalo de nuevo.';
       } finally {
         boton.disabled = false;
+        boton.classList.remove('is-loading');
+        el.formAcceso.classList.remove('saliendo');
       }
     });
 
@@ -423,8 +511,9 @@
         el.lista.replaceChildren(textoVacio('Todavía no hay conversaciones. Cuando un cliente escriba desde la web, aparecerá aquí.'));
         return;
       }
-      el.lista.replaceChildren(...conversaciones.map(c => {
+      el.lista.replaceChildren(...conversaciones.map((c, i) => {
         const li = document.createElement('li');
+        li.style.setProperty('--i', Math.min(i, 10));
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'conv' + (c.sin_responder ? ' conv--nueva' : '');
