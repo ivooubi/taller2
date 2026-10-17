@@ -9,4 +9,5 @@
 window.SUPABASE_CONFIG = {
   url: "https://nxykmhdtwismygyaljyz.supabase.co",
   anonKey: "sb_publishable_9xNx5TU7-eMw7ZVB2XV-YA_H8sVggBR"
+ vapidPublicKey: 'BFfXL_Vr2MYfNUI32S06b9FKv1s1OcXgxon35pjqS1lQqPxzjyT6BE65cmGTjXFHYZp2Y7ojIulvHF0XjMnAuNg'
 };
