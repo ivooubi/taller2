@@ -6,6 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="manifest-taller.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Panel">
   <title>Panel del taller</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -149,6 +154,9 @@
       transition: opacity .3s, transform .45s var(--ease), visibility 0s .45s;
     }
     .mostrar-lista, .btn--plegar { display: none; }
+    .btn--avisos[data-estado="activo"] { background: var(--accent); color: #fff; }
+    .btn--avisos[data-estado="activo"] svg { fill: currentColor; }
+    .btn--avisos[data-estado="bloqueado"] { opacity: .5; }
 
     .conversaciones { flex: 1; min-height: 0; margin: 0; padding: .5rem; overflow-y: auto; list-style: none; }
     .conv {
@@ -285,6 +293,9 @@
           <span class="directo" id="directo" role="status" aria-label="Conectando"></span>
         </div>
         <div class="lista__acciones">
+          <button class="btn btn--ghost btn--icono btn--avisos" id="avisos" type="button" aria-label="Activar avisos" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+          </button>
           <button class="btn btn--ghost btn--salir" id="salir" type="button">Salir</button>
           <button class="btn btn--ghost btn--icono btn--plegar" id="ocultar-lista" type="button" aria-label="Ocultar conversaciones" aria-controls="lista" aria-expanded="true">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M9.5 4.5v15M16 10l-2.5 2 2.5 2"/></svg>
@@ -314,6 +325,7 @@
   </div>
 
   <script src="config.js"></script>
+  <script src="push.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
   (() => {
@@ -434,6 +446,7 @@
       el.panel.hidden = false;
       setTimeout(() => el.panel.classList.remove('panel--entrando'), 1800);
       suscribir();
+      if (window.TallerPush) TallerPush.enlazar($('#avisos'), () => db, () => ({ rol: 'personal' }));
     }
 
     el.formAcceso.addEventListener('submit', async e => {
@@ -636,6 +649,11 @@
           temporizador = setTimeout(cargarLista, 150);
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
+          const n = payload.new;
+          if (n.autor === 'cliente' && window.TallerPush && (document.hidden || !abierta || n.conversacion_id !== abierta.id)) {
+            const c = conversaciones.find(x => x.id === n.conversacion_id);
+            TallerPush.local(`Nuevo mensaje de ${c ? c.nombre : 'un cliente'}`, separarContacto(n.contenido).texto.slice(0, 140), `conv-${n.conversacion_id}`, location.pathname);
+          }
           if (!abierta || payload.new.conversacion_id !== abierta.id) return;
           if (cargandoHilo) pendientes.push(payload.new); else pintarMensaje(payload.new);
         })
