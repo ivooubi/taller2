@@ -91,7 +91,7 @@
         else if (e === 'inactivo') { await activar(getDb(), getCtx()); if (await estado() === 'activo') aviso('Avisos activados.'); }
       } catch (err) {
         console.error('Avisos:', err);
-        aviso('No se pudieron activar los avisos. Inténtalo de nuevo.');
+        aviso('No se pudieron activar los avisos. Motivo: ' + ((err && err.message) || err));
       }
       pintar();
     });
